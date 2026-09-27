@@ -21,7 +21,7 @@ import {
   licenseTypeIds,
   requestedDaysByType,
 } from "@/lib/validation";
-import { audit, reference, reviewApplication } from "@/lib/service";
+import { audit, reference, reviewApplication, reviewGroupApplications } from "@/lib/service";
 import { cents, distribute, reviewers, priceForDays } from "@/lib/policy";
 export type ActionResult = { error?: string; success?: string };
 function errorMessage(error: unknown) {
@@ -281,6 +281,31 @@ export async function review(
   }
   revalidatePath("/", "layout");
   return { success: "Application reviewed successfully." };
+}
+export async function reviewGroup(
+  _: ActionResult,
+  form: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser(reviewers);
+  let result;
+  try {
+    result = await reviewGroupApplications(
+      user,
+      String(form.get("groupId")),
+      String(form.get("decision")),
+      String(form.get("paymentStatus") || "RECEIVED"),
+      await ipAddress(),
+    );
+  } catch (e) {
+    return { error: errorMessage(e) };
+  }
+  revalidatePath("/", "layout");
+  return {
+    success:
+      result.approved === result.total
+        ? `All ${result.approved} pending item(s) reviewed successfully.`
+        : `${result.approved} of ${result.total} reviewed. Some items need individual attention: ${result.failures.join(" ")}`,
+  };
 }
 export async function saveUser(
   _: ActionResult,

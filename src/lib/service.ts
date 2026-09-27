@@ -30,7 +30,8 @@ export function audit(
     },
   });
 }
-// Serializable transactions and a conditional status claim prevent duplicate license and payout creation.
+// A conditional status claim (claimed.count check below) prevents duplicate license and payout creation
+// without needing Serializable isolation, which caused heavy lock contention and timeouts on this DB host.
 export async function reviewApplication(
   actor: Actor,
   id: string,
@@ -172,8 +173,42 @@ export async function reviewApplication(
         },
       );
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    { timeout: 15000, maxWait: 10000 },
   );
+}
+export async function reviewGroupApplications(
+  actor: Actor,
+  groupId: string,
+  decision: string,
+  paymentStatus: string,
+  ip: string,
+) {
+  const apps = await db.licenseApplication.findMany({
+    where: { groupId, status: "PENDING" },
+    select: { id: true, requestedDays: true },
+  });
+  if (!apps.length) throw new Error("No pending items left to review.");
+  const failures: string[] = [];
+  let approved = 0;
+  for (const app of apps) {
+    try {
+      await reviewApplication(
+        actor,
+        app.id,
+        decision,
+        app.requestedDays,
+        "Reviewed via bulk action.",
+        paymentStatus,
+        ip,
+      );
+      approved++;
+    } catch (e) {
+      failures.push(e instanceof Error ? e.message : "Unknown error.");
+    }
+  }
+  if (!approved)
+    throw new Error(failures[0] || "None of the items could be reviewed.");
+  return { approved, total: apps.length, failures };
 }
 export async function expireLicenses() {
   const now = new Date(),

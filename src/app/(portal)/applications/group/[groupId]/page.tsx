@@ -5,12 +5,14 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   canReadApplication,
+  canReview,
   money,
   date,
   durationLabel,
   distribute,
 } from "@/lib/policy";
 import { Heading, Panel, Badge } from "@/components/common";
+import { BulkReviewForm } from "@/components/bulk-review-form";
 export default async function ApplicationGroup({
   params,
 }: {
@@ -56,6 +58,7 @@ export default async function ApplicationGroup({
     { lawyerCents: 0, reviewerCents: 0, governmentCents: 0 },
   );
   const allDecided = apps.every((a) => a.status !== "PENDING");
+  const pendingCount = apps.filter((a) => a.status === "PENDING").length;
   return (
     <>
       <Heading
@@ -124,6 +127,19 @@ export default async function ApplicationGroup({
           ))}
         </div>
       </Panel>
+      {pendingCount > 1 && canReview(user.role.code) && (
+        <Panel title="Bulk review">
+          <div className="panel-body" style={{ paddingTop: 0 }}>
+            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+              Approves every pending item above at its requested duration,
+              with payment marked as Received. Items that fail an individual
+              check (e.g. a payment mismatch) will be left pending for you to
+              review one by one.
+            </p>
+            <BulkReviewForm groupId={groupId} pendingCount={pendingCount} />
+          </div>
+        </Panel>
+      )}
       <Panel title={allDecided ? "Revenue split" : "Revenue split (estimated)"}>
         {!allDecided && (
           <p style={{ fontSize: 13, color: "var(--muted)" }}>
