@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "mysql"
+  url = env("DATABASE_URL")
+}
+enum RoleCode {
+  ADMIN
+  LAWYER
+  STATE_EMPLOYEE
+  STATE_ASSISTANT
+  REVIEWER
+}
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+enum EarningKind {
+  LAWYER
+  REVIEWER
+}
+enum PaymentStatus {
+  RECEIVED
+  NOT_RECEIVED
+  WAIVED
+}
+model Role {
+  id String @id @default(cuid())
+  code RoleCode @unique
+  users User[]
+}
+model User {
+  id String @id @default(cuid())
+  username String @unique @db.VarChar(60)
+  name String @db.VarChar(120)
+  passwordHash String @db.VarChar(255)
+  roleId String
+  role Role @relation(fields: [roleId], references: [id])
+  enabled Boolean @default(true)
+  deletedAt DateTime?
+  mustChangePassword Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions Session[]
+  applications LicenseApplication[] @relation("ApplicantLawyer")
+  reviews LicenseApplication[] @relation("ApplicationReviewer")
+  earnings Earnings[]
+  auditLogs AuditLog[]
+  notifications Notification[]
+  @@index([roleId, enabled])
+}
+model Session {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+  @@index([userId])
+}
+model LoginAttempt {
+  key String @id @db.VarChar(64)
+  attempts Int @default(0)
+  resetAt DateTime
+  @@index([resetAt])
+}
+model LicenseType {
+  id String @id @default(cuid())
+  name String @unique @db.VarChar(100)
+  description String @db.VarChar(500)
+  price90Cents Int @db.UnsignedInt
+  price180Cents Int @db.UnsignedInt
+  price365Cents Int @db.UnsignedInt
+  enabled Boolean @default(true)
+  deletedAt DateTime?
+  applications LicenseApplication[]
+  createdAt DateTime @default(now())
+}
+model LicenseApplication {
+  id String @id @default(cuid())
+  reference String @unique @db.VarChar(40)
+  groupId String? @db.VarChar(40)
+  citizenName String @db.VarChar(120)
+  cid String @db.VarChar(60)
+  phone String @db.VarChar(30)
+  licenseTypeId String
+  licenseType LicenseType @relation(fields: [licenseTypeId], references: [id])
+  typeName String @db.VarChar(100)
+  priceCents Int @db.UnsignedInt
+  paymentCents Int @db.UnsignedInt
+  citizenIdUrl String @db.VarChar(500)
+  requestedDays Int @db.UnsignedSmallInt
+  notes String @db.Text
+  lawyerId String
+  lawyer User @relation("ApplicantLawyer", fields: [lawyerId], references: [id])
+  reviewerId String?
+  reviewer User? @relation("ApplicationReviewer", fields: [reviewerId], references: [id])
+  status ApplicationStatus @default(PENDING)
+  rejectionReason String? @db.VarChar(1000)
+  paymentStatus PaymentStatus @default(NOT_RECEIVED)
+  durationDays Int?
+  createdAt DateTime @default(now())
+  reviewedAt DateTime?
+  renewalOfId String?
+  renewalOf License? @relation("Renewal", fields: [renewalOfId], references: [id])
+  license License? @relation("IssuedLicense")
+  revenue RevenueDistribution?
+  @@index([status, createdAt])
+  @@index([lawyerId, createdAt])
+  @@index([reviewerId, reviewedAt])
+  @@index([cid])
+  @@index([citizenName])
+  @@index([renewalOfId, status])
+  @@index([groupId])
+}
+model License {
+  id String @id @default(cuid())
+  number String @unique @db.VarChar(40)
+  applicationId String @unique
+  application LicenseApplication @relation("IssuedLicense", fields: [applicationId], references: [id])
+  citizenName String @db.VarChar(120)
+  cid String @db.VarChar(60)
+  issuedAt DateTime @default(now())
+  expiresAt DateTime
+  status LicenseStatus @default(ACTIVE)
+  revokedAt DateTime?
+  supersededAt DateTime?
+  revocationReason String? @db.VarChar(1000)
+  expiringNotifiedAt DateTime?
+  expiredNotifiedAt DateTime?
+  renewals LicenseApplication[] @relation("Renewal")
+  @@index([status, expiresAt])
+  @@index([cid])
+  @@index([citizenName])
+}
+model RevenueDistribution {
+  id String @id @default(cuid())
+  applicationId String @unique
+  application LicenseApplication @relation(fields: [applicationId], references: [id])
+  totalCents Int @db.UnsignedInt
+  lawyerBps Int @db.UnsignedSmallInt
+  reviewerBps Int @db.UnsignedSmallInt
+  governmentBps Int @db.UnsignedSmallInt
+  lawyerCents Int @db.UnsignedInt
+  reviewerCents Int @db.UnsignedInt
+  governmentCents Int @db.UnsignedInt
+  createdAt DateTime @default(now())
+  earnings Earnings[]
+  @@index([createdAt])
+}
+model Earnings {
+  id String @id @default(cuid())
+  revenueId String
+  revenue RevenueDistribution @relation(fields: [revenueId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  kind EarningKind
+  amountCents Int @db.UnsignedInt
+  createdAt DateTime @default(now())
+  @@unique([revenueId, kind])
+  @@index([userId, createdAt])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  userId String?
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actorName String @db.VarChar(120)
+  action String @db.VarChar(80)
+  entityId String? @db.VarChar(100)
+  details Json?
+  ipAddress String @db.VarChar(64)
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([action])
+}
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message String @db.VarChar(300)
+  href String @db.VarChar(200)
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId, readAt, createdAt])
+}
+model SystemSettings {
+  id Int @id @default(1)
+  organization String @default("State Licensing Authority") @db.VarChar(100)
+  lawyerBps Int @default(5000) @db.UnsignedSmallInt
+  reviewerBps Int @default(3000) @db.UnsignedSmallInt
+  governmentBps Int @default(2000) @db.UnsignedSmallInt
+  updatedAt DateTime @updatedAt
+}

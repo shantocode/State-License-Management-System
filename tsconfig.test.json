@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": ".test-build",
+    "rootDir": ".",
+    "isolatedModules": false,
+    "plugins": []
+  },
+  "include": ["tests/**/*.ts", "prisma/seed.ts"],
+  "exclude": ["node_modules", ".next"]
+}
