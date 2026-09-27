@@ -181,7 +181,7 @@ export async function submitApplication(
             );
         }
         const groupId = types.length > 1 ? reference("GRP") : null;
-        const created = [];
+        const created: any[] = [];
         for (const type of types) {
           const days = daysByType.get(type.id)!,
             priceCents = priceForDays(type, days);
