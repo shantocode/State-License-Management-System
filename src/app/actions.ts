@@ -249,7 +249,7 @@ export async function submitApplication(
           );
         return { ids: created.map((app) => app.id), groupId };
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { timeout: 15000, maxWait: 10000 },
     ));
   } catch (e) {
     return { error: errorMessage(e) };
@@ -363,7 +363,7 @@ export async function saveUser(
           },
         );
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      { timeout: 15000, maxWait: 10000 },
     );
   } catch (e) {
     return { error: errorMessage(e) };

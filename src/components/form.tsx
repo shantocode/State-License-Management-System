@@ -1,6 +1,7 @@
 "use client";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import type { ActionResult } from "@/app/actions";
 export function ActionForm({
@@ -42,7 +43,11 @@ export function Submit({
       type="submit"
       variant={danger ? "destructive" : "default"}
       disabled={pending}
+      style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
     >
+      {pending && (
+        <Loader2 size={16} className="spin" aria-hidden="true" />
+      )}
       {pending ? "Saving…" : children}
     </Button>
   );
