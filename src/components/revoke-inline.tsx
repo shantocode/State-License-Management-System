@@ -10,7 +10,6 @@ export function RevokeInline({ id }: { id: string }) {
     return (
       <Button
         type="button"
-        size="sm"
         variant="destructive"
         onClick={() => setOpen(true)}
       >
