@@ -8,13 +8,25 @@ export function RevokeInline({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
   if (!open)
     return (
-      <Button
-        type="button"
-        variant="destructive"
-        onClick={() => setOpen(true)}
-      >
-        Revoke
-      </Button>
+      <div className="flex gap-2">
+        <ActionForm action={updateLicense} className="inline">
+          <input name="id" type="hidden" value={id} />
+          <input name="operation" type="hidden" value="revoke" />
+          <input
+            name="reason"
+            type="hidden"
+            value="Expired license revoked from registry"
+          />
+          <Submit danger>Instant revoke</Submit>
+        </ActionForm>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setOpen(true)}
+        >
+          Revoke with reason
+        </Button>
+      </div>
     );
   return (
     <ActionForm action={updateLicense} className="flex flex-col gap-2">
