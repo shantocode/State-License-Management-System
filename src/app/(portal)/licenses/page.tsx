@@ -18,6 +18,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { RevokeInline } from "@/components/revoke-inline";
 export default async function Licenses({
   searchParams,
 }: {
@@ -82,6 +83,7 @@ export default async function Licenses({
                   "Issued",
                   "Expires",
                   "Status",
+                  ...(user.role.code === "ADMIN" ? ["Action"] : []),
                 ].map((t) => (
                   <TableHead key={t}>{t}</TableHead>
                 ))}
@@ -105,6 +107,13 @@ export default async function Licenses({
                   <TableCell>
                     <Badge status={effectiveStatus(l.status, l.expiresAt)} />
                   </TableCell>
+                  {user.role.code === "ADMIN" && (
+                    <TableCell>
+                      {effectiveStatus(l.status, l.expiresAt) === "EXPIRED" && (
+                        <RevokeInline id={l.id} />
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
