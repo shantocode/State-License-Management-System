@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { systemSettings } from "@/lib/settings";
+import { applicationSummary, monthlyRevenue } from "@/lib/dashboard";
 import { Heading, Panel, Empty } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { ApplicationTable } from "@/components/application-table";
@@ -21,15 +23,11 @@ export default async function Dashboard() {
     lawyer = user.role.code === "LAWYER";
   const scope = lawyer ? { lawyerId: user.id } : {},
     now = new Date(),
-    month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
     sixMonths = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1),
     );
   const [
-    total,
-    pending,
-    approved,
-    rejected,
+    summary,
     active,
     expired,
     recent,
@@ -40,24 +38,9 @@ export default async function Dashboard() {
     users,
     lawyers,
     reviewers,
-    reviewed,
+    transactions,
   ] = await Promise.all([
-    db.licenseApplication.count({ where: scope }),
-    db.licenseApplication.count({ where: { ...scope, status: "PENDING" } }),
-    db.licenseApplication.count({
-      where: {
-        ...scope,
-        status: "APPROVED",
-        ...(!admin && !lawyer ? { reviewerId: user.id } : {}),
-      },
-    }),
-    db.licenseApplication.count({
-      where: {
-        ...scope,
-        status: "REJECTED",
-        ...(!admin && !lawyer ? { reviewerId: user.id } : {}),
-      },
-    }),
+    applicationSummary(user.role.code, user.id),
     db.license.count({
       where: { application: scope, status: "ACTIVE", expiresAt: { gt: now } },
     }),
@@ -87,7 +70,7 @@ export default async function Dashboard() {
           _sum: { amountCents: true },
         })
       : null,
-    db.systemSettings.findUniqueOrThrow({ where: { id: 1 } }),
+    systemSettings(),
     db.auditLog.findMany({
       where: admin ? {} : { userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -107,17 +90,10 @@ export default async function Dashboard() {
           },
         })
       : 0,
-    db.licenseApplication.count({ where: { reviewerId: user.id } }),
+    monthlyRevenue(sixMonths, admin ? null : user.id),
   ]);
-  const transactions = admin
-    ? await db.revenueDistribution.findMany({
-        where: { createdAt: { gte: sixMonths } },
-        select: { createdAt: true, totalCents: true, governmentCents: true },
-      })
-    : await db.earnings.findMany({
-        where: { userId: user.id, createdAt: { gte: sixMonths } },
-        select: { createdAt: true, amountCents: true },
-      });
+  if (!settings) throw new Error("System settings are missing.");
+  const { total, pending, approved, rejected, reviewed } = summary;
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5 + i, 1),
@@ -130,16 +106,13 @@ export default async function Dashboard() {
   });
   for (const t of transactions) {
     const m = months.find(
-      (m) => m.key === t.createdAt.toISOString().slice(0, 7),
+      (m) => m.key === t.month,
     );
-    if (m) m.value += "totalCents" in t ? t.totalCents : t.amountCents;
+    if (m) m.value += t.cents;
   }
   const monthly = transactions
-      .filter((t) => t.createdAt >= month)
-      .reduce(
-        (n, t) => n + ("totalCents" in t ? t.totalCents : t.amountCents),
-        0,
-      ),
+      .filter((t) => t.month >= now.toISOString().slice(0, 7))
+      .reduce((sum, t) => sum + t.cents, 0),
     max = Math.max(...months.map((m) => m.value), 1);
   const stats = admin
     ? [

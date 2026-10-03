@@ -49,6 +49,10 @@ Generate a cron secret on your trusted machine with `node -e "console.log(requir
 
 Deploy through your Vercel project. The code is configured for Node.js server functions; do not switch Prisma routes to Edge Runtime.
 
+`vercel.json` now sets `regions: ["sin1"]` for the confirmed Singapore MariaDB host. Redeploy for this change to take effect and confirm Singapore in the deployment's function region. If the database moves, update this setting to match it. A database in Singapore and a function in the default US region pay long-distance latency on every SQL round trip. See [Vercel function regions](https://vercel.com/docs/functions/configuring-functions/region).
+
+For this performance update, apply `202610030001_list_sort_indexes` with `npm run db:migrate` as a controlled release step. It adds two indexes without changing records; large tables can take time or locks while indexes are built. No production migration is performed by the build. See `PERFORMANCE.md` for measurements and verification commands.
+
 ## 4. Expiration scheduler
 
 `vercel.json` schedules `/api/cron/expiration` daily at 00:00 UTC. Vercel supplies the `Authorization` header from `CRON_SECRET`. Unauthenticated calls are rejected. See [Vercel's cron configuration](https://vercel.com/docs/cron-jobs/manage-cron-jobs) and [scheduling limits](https://vercel.com/docs/cron-jobs/usage-and-pricing).

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
@@ -20,6 +21,11 @@ export async function ipAddress() {
 export async function currentUser() {
   const token = (await cookies()).get(cookieName)?.value;
   if (!token) return null;
+  return sessionUser(token);
+}
+// React deduplicates layout/page reads only within a render, never across requests.
+// Key by token so a session cookie changed by an action cannot reuse the old user.
+const sessionUser = cache(async (token: string) => {
   const session = await db.session.findUnique({
     where: { id: digest(token) },
     include: { user: { include: { role: true } } },
@@ -32,7 +38,7 @@ export async function currentUser() {
   )
     return null;
   return session.user;
-}
+});
 export async function requireUser(
   allowed?: readonly RoleCode[],
   allowPasswordChange = false,

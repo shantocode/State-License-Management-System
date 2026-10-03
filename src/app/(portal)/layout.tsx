@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { systemSettings } from "@/lib/settings";
 import {
   Navigation,
   ThemeToggle,
@@ -15,7 +16,7 @@ export default async function PortalLayout({
 }) {
   const user = await requireUser();
   const [settings, notifications] = await Promise.all([
-    db.systemSettings.findUnique({ where: { id: 1 } }),
+    systemSettings(),
     db.notification.count({ where: { userId: user.id, readAt: null } }),
   ]);
   return (
@@ -64,4 +65,3 @@ export default async function PortalLayout({
     </>
   );
 }
-

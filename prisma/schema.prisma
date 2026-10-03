@@ -113,6 +113,7 @@ model LicenseApplication {
   license License? @relation("IssuedLicense")
   revenue RevenueDistribution?
   @@index([status, createdAt])
+  @@index([createdAt])
   @@index([lawyerId, createdAt])
   @@index([reviewerId, reviewedAt])
   @@index([cid])
@@ -137,6 +138,7 @@ model License {
   expiredNotifiedAt DateTime?
   renewals LicenseApplication[] @relation("Renewal")
   @@index([status, expiresAt])
+  @@index([issuedAt])
   @@index([cid])
   @@index([citizenName])
 }

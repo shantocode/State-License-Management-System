@@ -10,6 +10,6 @@
     "isolatedModules": false,
     "plugins": []
   },
-  "include": ["tests/**/*.ts", "prisma/seed.ts"],
+  "include": ["tests/**/*.ts", "prisma/seed.ts", "scripts/check-dashboard-performance.ts"],
   "exclude": ["node_modules", ".next"]
 }
