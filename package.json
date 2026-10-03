@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node --import tsx prisma/seed.ts",
+    "db:import-licenses": "node --import tsx prisma/import-licenses.ts",
     "test:integration": "tsc -p tsconfig.test.json && node --test .test-build/tests/integration/*.test.js"
   },
   "dependencies": {

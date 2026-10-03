@@ -87,12 +87,16 @@ export default async function ApplicationDetail({
               ))}
             </dl>
             <div className="panel-body" style={{ paddingTop: 0 }}>
-              <Button asChild variant="outline">
-                <a href={a.citizenIdUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink size={16} />
-                  View Citizen ID picture
-                </a>
-              </Button>
+              {/^https?:\/\//.test(a.citizenIdUrl) ? (
+                <Button asChild variant="outline">
+                  <a href={a.citizenIdUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink size={16} />
+                    View Citizen ID picture
+                  </a>
+                </Button>
+              ) : (
+                <span>Citizen ID picture: N/A</span>
+              )}
             </div>
             {a.notes && (
               <div className="panel-body">
