@@ -1,5 +1,7 @@
 # Vercel + MariaDB deployment
 
+For this update, run `npm run db:migrate` to apply all pending migrations, including `202610090001_two_month_duration_remove_id_link` and `202610090002_compatible_short_term_price`, before starting the application. The final Prisma schema maps the two-month price to the established `price90Cents` database column. See [UPDATE-NOTES.md](UPDATE-NOTES.md) for pricing effects, compatibility details, and Windows commands.
+
 ## 1. Database
 
 Use a new MariaDB database with `utf8mb4` encoding. MariaDB 10.11+ is the recommended target; the project also targets MySQL 8.0.16+. Keep it in a region near your Vercel functions. The hostname must be reachable from Vercel; `localhost` on a separate host will not work.

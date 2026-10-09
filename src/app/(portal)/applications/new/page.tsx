@@ -34,7 +34,7 @@ export default async function NewApplication({
         description={
           prior
             ? `Renewal of ${prior.number}. Previous records remain in the license history.`
-            : "Enter citizen details and a link to the Citizen ID picture for review."
+            : "Enter citizen details and select license types and durations for review."
         }
       />
       <Panel title="Application details">

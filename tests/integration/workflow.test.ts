@@ -43,7 +43,7 @@ test("transactional approval, RBAC, renewal, expiration, and reports", async () 
       data: {
         name: `Test License ${prefix}`,
         description: "Integration test",
-        price90Cents: 5000000,
+        price60Cents: 5000000,
         price180Cents: 5000000,
         price365Cents: 5000000,
       },
@@ -62,22 +62,22 @@ test("transactional approval, RBAC, renewal, expiration, and reports", async () 
           phone: "12345",
           licenseTypeId: type.id,
           typeName: type.name,
-          priceCents: type.price90Cents,
-          paymentCents: type.price90Cents,
-          citizenIdUrl: "https://example.com/id.jpg",
-          requestedDays: 90,
+          priceCents: type.price60Cents,
+          paymentCents: type.price60Cents,
+          requestedDays: 60,
           notes: "",
           lawyerId: lawyer.id,
           ...extra,
         },
       });
     const app = await create();
+    assert.equal(app.citizenIdUrl, "");
     await assert.rejects(
-      reviewApplication(lawyer, app.id, "approve", 90, "", "RECEIVED", "test"),
+      reviewApplication(lawyer, app.id, "approve", 60, "", "RECEIVED", "test"),
       /authorized reviewers/,
     );
     await assert.rejects(
-      reviewApplication(reviewer, app.id, "approve", 90, "", "NOT_RECEIVED", "test"),
+      reviewApplication(reviewer, app.id, "approve", 60, "", "NOT_RECEIVED", "test"),
       /Verify payment/,
     );
     assert.equal(
@@ -86,8 +86,8 @@ test("transactional approval, RBAC, renewal, expiration, and reports", async () 
       "PENDING",
     );
     const decisions = await Promise.allSettled([
-      reviewApplication(reviewer, app.id, "approve", 90, "", "RECEIVED", "test"),
-      reviewApplication(reviewer, app.id, "approve", 90, "", "RECEIVED", "test"),
+      reviewApplication(reviewer, app.id, "approve", 60, "", "RECEIVED", "test"),
+      reviewApplication(reviewer, app.id, "approve", 60, "", "RECEIVED", "test"),
     ]);
     assert.equal(decisions.filter((x) => x.status === "fulfilled").length, 1);
     assert.equal(
@@ -112,6 +112,7 @@ test("transactional approval, RBAC, renewal, expiration, and reports", async () 
         where: { applicationId: app.id },
       }),
       renewal = await create({ renewalOfId: license.id });
+    assert.equal(license.expiresAt.getTime() - license.issuedAt.getTime(), 60 * 86400000);
     await reviewApplication(
       reviewer,
       renewal.id,

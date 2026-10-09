@@ -75,7 +75,7 @@ model LicenseType {
   id String @id @default(cuid())
   name String @unique @db.VarChar(100)
   description String @db.VarChar(500)
-  price90Cents Int @db.UnsignedInt
+  price60Cents Int @map("price90Cents") @db.UnsignedInt
   price180Cents Int @db.UnsignedInt
   price365Cents Int @db.UnsignedInt
   enabled Boolean @default(true)
@@ -95,7 +95,7 @@ model LicenseApplication {
   typeName String @db.VarChar(100)
   priceCents Int @db.UnsignedInt
   paymentCents Int @db.UnsignedInt
-  citizenIdUrl String @db.VarChar(500)
+  citizenIdUrl String @default("") @db.VarChar(500)
   requestedDays Int @db.UnsignedSmallInt
   notes String @db.Text
   lawyerId String

@@ -18,7 +18,7 @@ export function ApplicationForm({
   types: {
     id: string;
     name: string;
-    price90Cents: number;
+    price60Cents: number;
     price180Cents: number;
     price365Cents: number;
   }[];
@@ -158,20 +158,6 @@ export function ApplicationForm({
         </Field>
       </div>
       <div className="full">
-        <Field
-          label="Citizen ID picture link"
-          hint="Paste a link to the citizen's ID photo (no file upload)."
-        >
-          <input
-            name="citizenIdUrl"
-            type="url"
-            required
-            maxLength={500}
-            placeholder="https://…"
-          />
-        </Field>
-      </div>
-      <div className="full">
         <Field label="Notes (optional)">
           <textarea
             name="notes"
@@ -200,7 +186,7 @@ export function ApplicationForm({
         </div>
       )}
       <div className="alert info full">
-        The reviewer will verify the citizen ID and decide the application.
+        The reviewer will verify the citizen details and decide the application.
         Earnings are recorded after approval. Selecting several license types
         submits one application per type.
       </div>

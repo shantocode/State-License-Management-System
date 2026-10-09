@@ -32,7 +32,7 @@ async function seed() {
   });
   for (const [
     name,
-    price90Cents,
+    price60Cents,
     price180Cents,
     price365Cents,
     description,
@@ -61,7 +61,7 @@ async function seed() {
   ] as const)
     await db.licenseType.upsert({
       where: { name },
-      create: { name, price90Cents, price180Cents, price365Cents, description },
+      create: { name, price60Cents, price180Cents, price365Cents, description },
       update: {},
     });
   console.log(

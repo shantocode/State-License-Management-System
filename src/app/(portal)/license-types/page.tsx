@@ -34,7 +34,7 @@ export default async function LicenseTypes({
               <div className="catalog-price">
                 {durations
                   .map((d) => `${durationLabel(d)}: ${money(
-                    { 90: t.price90Cents, 180: t.price180Cents, 365: t.price365Cents }[d],
+                    { 60: t.price60Cents, 180: t.price180Cents, 365: t.price365Cents }[d],
                   )}`)
                   .join(" · ")}
               </div>
@@ -61,13 +61,13 @@ export default async function LicenseTypes({
               maxLength={100}
             />
           </Field>
-          <Field label={`Price for ${durationLabel(90)} ($)`}>
+          <Field label={`Price for ${durationLabel(60)} ($)`}>
             <input
-              name="price90"
+              name="price60"
               type="number"
               min="0.01"
               step="0.01"
-              defaultValue={selected ? selected.price90Cents / 100 : undefined}
+              defaultValue={selected ? selected.price60Cents / 100 : undefined}
               required
             />
           </Field>

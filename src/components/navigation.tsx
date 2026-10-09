@@ -1,7 +1,8 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -12,9 +13,6 @@ import {
   ScrollText,
   Settings,
   Bell,
-  Moon,
-  Sun,
-  Landmark,
   Menu,
   X,
   LogOut,
@@ -56,32 +54,37 @@ export function Navigation({
         className="mobile-menu icon-button"
         onClick={() => setOpen(!open)}
         aria-label="Toggle navigation"
+        aria-expanded={open}
+        aria-controls="licensing-sidebar"
       >
         {open ? <X /> : <Menu />}
       </button>
-      <aside className={`sidebar ${open ? "open" : ""}`}>
+      <aside id="licensing-sidebar" className={`sidebar ${open ? "open" : ""}`}>
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">
-            <Landmark size={25} />
+            <Image src="/state-logo.png" alt="City of Los Santos seal" width={52} height={52} />
           </span>
           <span>
             SLMS<small>STATE LICENSING</small>
           </span>
         </Link>
         <div className="sidebar-caption">WORKSPACE</div>
-        <nav>
-          {items.map(([href, label, Icon]) => (
-            <Link
-              onClick={() => setOpen(false)}
-              className={path.startsWith(href) ? "selected" : ""}
-              key={href}
-              href={href}
-              aria-current={path.startsWith(href) ? "page" : undefined}
-            >
-              <Icon size={19} />
-              {label}
-            </Link>
-          ))}
+        <nav aria-label="Licensing navigation">
+          {items.map(([href, label, Icon]) => {
+            const active = path === href || path.startsWith(`${href}/`);
+            return (
+              <Link
+                onClick={() => setOpen(false)}
+                className={active ? "selected" : ""}
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon size={19} />
+                {label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="sidebar-footer">
           <div className="authority">
@@ -118,27 +121,6 @@ export function Navigation({
         </div>
       </aside>
     </>
-  );
-}
-export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
-  useEffect(() => {
-    const value = localStorage.getItem("slms-theme") === "dark";
-    setDark(value);
-    document.documentElement.classList.toggle("dark", value);
-  }, []);
-  return (
-    <button
-      className="icon-button"
-      aria-label={dark ? "Use light theme" : "Use dark theme"}
-      onClick={() => {
-        document.documentElement.classList.toggle("dark", !dark);
-        localStorage.setItem("slms-theme", !dark ? "dark" : "light");
-        setDark(!dark);
-      }}
-    >
-      {dark ? <Sun size={20} /> : <Moon size={20} />}
-    </button>
   );
 }
 export function NotificationsLink({ count }: { count: number }) {

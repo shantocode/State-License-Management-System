@@ -2,6 +2,8 @@
 
 SLMS is a Next.js 15 / React 19 application for administrator-managed citizen licensing. It uses TypeScript, Prisma 6, MariaDB/MySQL, Tailwind CSS 4, shadcn-style Radix UI primitives, and Server Actions.
 
+See [UPDATE-NOTES.md](UPDATE-NOTES.md) for the refreshed civic design, fix for the missing `price60Cents` column error, and Windows update commands. The two-month duration, removed Citizen ID picture link, and supplied state logo are included.
+
 ## Run locally
 
 Requirements: Node.js 22 LTS (or 24), npm, and MariaDB 10.11+/MySQL 8.0.16+.

@@ -4,10 +4,10 @@ import { db } from "@/lib/db";
 import { systemSettings } from "@/lib/settings";
 import {
   Navigation,
-  ThemeToggle,
   NotificationsLink,
 } from "@/components/navigation";
 import { date } from "@/lib/policy";
+import { ThemeToggle } from "@/components/theme-toggle";
 export const dynamic = "force-dynamic";
 export default async function PortalLayout({
   children,
@@ -30,6 +30,10 @@ export default async function PortalLayout({
         organization={settings?.organization || "State Licensing Authority"}
       />
       <div className="workspace">
+        <div className="service-strip">
+          <span>City of Los Santos · State Licensing Authority</span>
+          <span>Personnel portal</span>
+        </div>
         <header className="topbar">
           <form className="topbar-search" action="/search">
             <Search size={19} />
@@ -41,25 +45,21 @@ export default async function PortalLayout({
           </form>
           <div className="topbar-actions">
             <span className="today">{date(new Date())}</span>
-            <ThemeToggle />
             <NotificationsLink count={notifications} />
+            <ThemeToggle />
           </div>
         </header>
         <main id="main" className="main">
           {children}
           <footer className="footer">
-  <span>
-    © 2026 State License Management System • Developed & Managed by{" "}
-    <a
-  href="https://shant0.xyz"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="footer-credit"
->
-  Shanto
-</a>
-  </span>
-</footer>
+            <span>© 2026 State License Management System</span>
+            <span>
+              Developed & managed by{" "}
+              <a href="https://shant0.xyz" target="_blank" rel="noopener noreferrer" className="footer-credit">
+                Shanto
+              </a>
+            </span>
+          </footer>
         </main>
       </div>
     </>

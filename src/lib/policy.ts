@@ -12,13 +12,13 @@ export const reviewers: RoleCode[] = [
   "STATE_ASSISTANT",
   "REVIEWER",
 ];
-export const durations = [90, 180, 365] as const;
+export const durations = [60, 180, 365] as const;
 export function priceForDays(
-  type: { price90Cents: number; price180Cents: number; price365Cents: number },
+  type: { price60Cents: number; price180Cents: number; price365Cents: number },
   days: number,
 ) {
   const price = (
-    { 90: type.price90Cents, 180: type.price180Cents, 365: type.price365Cents } as Record<
+    { 60: type.price60Cents, 180: type.price180Cents, 365: type.price365Cents } as Record<
       number,
       number
     >
@@ -28,7 +28,7 @@ export function priceForDays(
   return price;
 }
 export const durationLabel = (days: number) =>
-  ({ 90: "3 months", 180: "6 months", 365: "12 months" })[days] ??
+  ({ 60: "2 months", 90: "3 months", 180: "6 months", 365: "12 months" })[days] ??
   `${days} days`;
 export const paymentStatuses = ["RECEIVED", "NOT_RECEIVED", "WAIVED"] as const;
 export type PaymentStatus = (typeof paymentStatuses)[number];

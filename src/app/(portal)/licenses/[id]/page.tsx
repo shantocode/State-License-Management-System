@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Landmark, RefreshCcw } from "lucide-react";
+import Image from "next/image";
+import { RefreshCcw } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { canReadApplication, date, effectiveStatus } from "@/lib/policy";
@@ -59,7 +60,7 @@ export default async function LicenseDetail({
         <div>
           <Panel className="license-card">
             <div className="license-seal">
-              <Landmark size={42} />
+              <Image src="/state-logo.png" alt="City of Los Santos seal" width={72} height={72} />
               <div>
                 <small>STATE LICENSING AUTHORITY</small>
                 <h2>{l.application.typeName}</h2>

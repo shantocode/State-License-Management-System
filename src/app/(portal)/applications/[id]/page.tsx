@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExternalLink } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -13,7 +12,6 @@ import {
   distribute,
 } from "@/lib/policy";
 import { Heading, Panel, Badge } from "@/components/common";
-import { Button } from "@/components/ui/button";
 import { ReviewForm } from "@/components/review-form";
 export default async function ApplicationDetail({
   params,
@@ -86,18 +84,6 @@ export default async function ApplicationDetail({
                 </div>
               ))}
             </dl>
-            <div className="panel-body" style={{ paddingTop: 0 }}>
-              {/^https?:\/\//.test(a.citizenIdUrl) ? (
-                <Button asChild variant="outline">
-                  <a href={a.citizenIdUrl} target="_blank" rel="noreferrer">
-                    <ExternalLink size={16} />
-                    View Citizen ID picture
-                  </a>
-                </Button>
-              ) : (
-                <span>Citizen ID picture: N/A</span>
-              )}
-            </div>
             {a.notes && (
               <div className="panel-body">
                 <h3>Notes</h3>

@@ -31,14 +31,14 @@ export function ReviewForm({
             hint="Defaults to what the applicant requested."
           >
             <select name="days" defaultValue={String(requestedDays)}>
-              <option value="90">3 months · 90 days</option>
+              <option value="60">2 months · 60 days</option>
               <option value="180">6 months · 180 days</option>
               <option value="365">12 months · 365 days</option>
             </select>
           </Field>
           <Field
             label="Payment status"
-            hint="Verify the Citizen ID picture, then record whether payment was received."
+            hint="Verify the citizen details, then record whether payment was received."
           >
             <select name="paymentStatus" defaultValue="RECEIVED" required>
               <option value="RECEIVED">Received</option>

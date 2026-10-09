@@ -31,11 +31,6 @@ export const citizenSchema = z.object({
     .string()
     .trim()
     .regex(/^[+()\d\s-]{5,30}$/, "Enter a valid phone number."),
-  citizenIdUrl: z
-    .string()
-    .trim()
-    .max(500)
-    .url("Enter a valid link (https://…) to the Citizen ID picture."),
   notes: z.string().trim().max(5000),
 });
 export const object = (form: FormData) => Object.fromEntries(form.entries());

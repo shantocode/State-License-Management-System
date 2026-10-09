@@ -189,6 +189,7 @@ export async function submitApplication(
             await tx.licenseApplication.create({
               data: {
                 ...data,
+                citizenIdUrl: "",
                 licenseTypeId: type.id,
                 reference: reference("APP"),
                 groupId,
@@ -405,17 +406,17 @@ export async function saveType(
     const id = String(form.get("id") || ""),
       name = z.string().trim().min(2).max(100).parse(form.get("name")),
       description = z.string().max(500).parse(form.get("description")),
-      price90Cents = cents(form.get("price90")),
+      price60Cents = cents(form.get("price60")),
       price180Cents = cents(form.get("price180")),
       price365Cents = cents(form.get("price365")),
       ip = await ipAddress();
-    if (![price90Cents, price180Cents, price365Cents].every((p) => p > 0))
+    if (![price60Cents, price180Cents, price365Cents].every((p) => p > 0))
       throw new Error("Every duration's price must be greater than zero.");
     await db.$transaction(async (tx) => {
       const data = {
         name,
         description,
-        price90Cents,
+        price60Cents,
         price180Cents,
         price365Cents,
         enabled: form.get("enabled") === "on",
