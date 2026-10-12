@@ -74,8 +74,9 @@ export async function reportData(
     const rows = await db.license.findMany({
       where: {
         issuedAt: period,
+        deletedAt: null,
         ...(type === "active"
-          ? { status: "ACTIVE" as const, expiresAt: { gt: now } }
+          ? { status: "ACTIVE" as const, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }
           : {
               OR: [
                 { status: "EXPIRED" as const },

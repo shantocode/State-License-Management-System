@@ -42,7 +42,7 @@ test("revenue conserves cents and rejects invalid percentages", () => {
 });
 test("role and ownership boundaries", () => {
   assert.equal(canReview("LAWYER"), false);
-  for (const role of roles.filter((r) => r !== "LAWYER"))
+  for (const role of roles.filter((r) => !["LAWYER", "DRIVING_INSTRUCTOR"].includes(r)))
     assert.equal(canReview(role), true);
   assert.equal(canReadApplication("LAWYER", "one", "two"), false);
   assert.equal(canReadApplication("LAWYER", "one", "one"), true);

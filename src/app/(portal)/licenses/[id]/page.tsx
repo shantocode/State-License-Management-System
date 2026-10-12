@@ -4,7 +4,7 @@ import Image from "next/image";
 import { RefreshCcw } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { canReadApplication, date, effectiveStatus } from "@/lib/policy";
+import { canReadApplication, canRevoke, date, effectiveStatus } from "@/lib/policy";
 import { Heading, Panel, Badge, Field } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { ActionForm, Submit } from "@/components/form";
@@ -24,6 +24,7 @@ export default async function LicenseDetail({
             lawyer: { select: { name: true } },
             reviewer: { select: { name: true } },
             renewalOf: true,
+            licenseType: true,
           },
         },
         renewals: {
@@ -34,7 +35,7 @@ export default async function LicenseDetail({
     });
   if (
     !l ||
-    !canReadApplication(user.role.code, user.id, l.application.lawyerId)
+    l.deletedAt || (user.role.code === "DRIVING_INSTRUCTOR" && !l.application.licenseType.isDriving)
   )
     notFound();
   const status = effectiveStatus(l.status, l.expiresAt);
@@ -44,7 +45,7 @@ export default async function LicenseDetail({
         title={l.number}
         description="Official license record"
         action={
-          user.role.code === "LAWYER" &&
+          user.role.code === "LAWYER" && l.application.lawyerId === user.id && l.expiresAt !== null &&
           l.status !== "REVOKED" &&
           !l.renewals.some((r) => r.status !== "REJECTED") && (
             <Button asChild>
@@ -115,7 +116,7 @@ export default async function LicenseDetail({
                     maxLength={60}
                   />
                 </Field>
-                <Field label="Expiration (UTC)">
+                {l.expiresAt !== null && <Field label="Expiration (UTC)">
                   <input
                     name="expiresAt"
                     type="datetime-local"
@@ -123,6 +124,7 @@ export default async function LicenseDetail({
                     required
                   />
                 </Field>
+                }
                 <Field label="Reason for change">
                   <input
                     name="reason"
@@ -141,12 +143,12 @@ export default async function LicenseDetail({
         <div>
           <Panel title="License history">
             <div className="panel-body">
-              <Link
+              {canReadApplication(user.role.code, user.id, l.application.lawyerId) && <Link
                 className="text-link"
                 href={`/applications/${l.applicationId}`}
               >
                 Original application →
-              </Link>
+              </Link>}
               {l.application.renewalOf && (
                 <p style={{ marginTop: 15 }}>
                   <Link
@@ -159,9 +161,7 @@ export default async function LicenseDetail({
               )}
               {l.renewals.map((r) => (
                 <div key={r.id} style={{ marginTop: 20 }}>
-                  <Link className="text-link" href={`/applications/${r.id}`}>
-                    {r.reference}
-                  </Link>
+                  {canReadApplication(user.role.code, user.id, r.lawyerId) ? <Link className="text-link" href={`/applications/${r.id}`}>{r.reference}</Link> : <span>{r.reference}</span>}
                   <p>
                     <Badge status={r.status} />{" "}
                     <small>{date(r.createdAt)}</small>
@@ -185,7 +185,7 @@ export default async function LicenseDetail({
               )}
             </div>
           </Panel>
-          {user.role.code === "ADMIN" && l.status !== "REVOKED" && (
+          {canRevoke(user.role.code, l.status, l.expiresAt) && (
             <Panel title="Revoke license">
               <ActionForm action={updateLicense}>
                 <input name="id" type="hidden" value={l.id} />

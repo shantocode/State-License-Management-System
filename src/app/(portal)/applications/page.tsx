@@ -1,3 +1,4 @@
+import { isApplicant } from "@/lib/policy";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
@@ -28,7 +29,7 @@ export default async function Applications({
     db.licenseApplication.findMany({
       where: {
         ...applicationWhere(user.role.code, user.id, q, status, type, lawyer),
-        ...(view === "reviewed" && user.role.code !== "LAWYER"
+        ...(view === "reviewed" && !isApplicant(user.role.code)
           ? { reviewerId: user.id }
           : {}),
       },
@@ -38,12 +39,12 @@ export default async function Applications({
       take: 21,
     }),
     db.licenseType.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...(user.role.code === "DRIVING_INSTRUCTOR" ? { isDriving: true } : {}) },
       orderBy: { name: "asc" },
     }),
-    user.role.code !== "LAWYER"
+    !isApplicant(user.role.code)
       ? db.user.findMany({
-          where: { deletedAt: null, role: { code: "LAWYER" } },
+          where: { deletedAt: null, role: { code: { in: ["LAWYER", "DRIVING_INSTRUCTOR"] } } },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
@@ -54,12 +55,12 @@ export default async function Applications({
       <Heading
         title="Applications"
         description={
-          user.role.code === "LAWYER"
+          isApplicant(user.role.code)
             ? "Submit citizen applications and follow each review."
             : "Review payments, decide applications, and track their history."
         }
         action={
-          user.role.code === "LAWYER" && (
+          isApplicant(user.role.code) && (
             <Button asChild>
               <Link href="/applications/new">
                 <Plus size={17} />
@@ -95,9 +96,9 @@ export default async function Applications({
               </option>
             ))}
           </select>
-          {user.role.code !== "LAWYER" && (
+          {!isApplicant(user.role.code) && (
             <select name="lawyer" defaultValue={lawyer} aria-label="Lawyer">
-              <option value="">All lawyers</option>
+              <option value="">All applicants</option>
               {lawyers.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
@@ -106,7 +107,7 @@ export default async function Applications({
             </select>
           )}
           <Button variant="outline">Apply filters</Button>
-          {user.role.code !== "LAWYER" && (
+          {!isApplicant(user.role.code) && (
             <select name="view" defaultValue={view} aria-label="Review history">
               <option value="">All applications</option>
               <option value="reviewed">My review history</option>

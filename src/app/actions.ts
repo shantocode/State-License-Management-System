@@ -22,10 +22,14 @@ import {
   requestedDaysByType,
 } from "@/lib/validation";
 import { audit, reference, reviewApplication, reviewGroupApplications } from "@/lib/service";
-import { cents, distribute, reviewers, priceForDays } from "@/lib/policy";
+import { cents, distribute, reviewers, priceForDays, applicationTerms, canRevoke } from "@/lib/policy";
 export type ActionResult = { error?: string; success?: string };
 function errorMessage(error: unknown) {
   if (error instanceof z.ZodError) return error.issues[0].message;
+  if (error instanceof Prisma.PrismaClientUnknownRequestError && /constraint|requestedDays|price60Cents|price90Cents/i.test(error.message))
+    return "The database duration rules are outdated. Ask the administrator to run npm run db:migrate from this release, then retry.";
+  if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2004", "P2010", "P2021", "P2022"].includes(error.code))
+    return "The database schema needs updating. Ask the administrator to run npm run db:migrate from this release, then retry.";
   if (error instanceof Prisma.PrismaClientKnownRequestError)
     return error.code === "P2002"
       ? "That record already exists."
@@ -137,7 +141,7 @@ export async function submitApplication(
   _: ActionResult,
   form: FormData,
 ): Promise<ActionResult> {
-  const user = await requireUser(["LAWYER"]);
+  const user = await requireUser(["LAWYER", "DRIVING_INSTRUCTOR"]);
   let ids: string[] = [];
   let groupId: string | null = null;
   try {
@@ -171,7 +175,7 @@ export async function submitApplication(
           });
           if (
             prior.application.lawyerId !== user.id ||
-            prior.status === "REVOKED" ||
+            prior.status === "REVOKED" || prior.deletedAt || prior.expiresAt === null ||
             prior.renewals.length ||
             prior.cid !== data.cid ||
             prior.application.licenseTypeId !== types[0].id
@@ -183,8 +187,8 @@ export async function submitApplication(
         const groupId = types.length > 1 ? reference("GRP") : null;
         const created: any[] = [];
         for (const type of types) {
-          const days = daysByType.get(type.id)!,
-            priceCents = priceForDays(type, days);
+          const terms = applicationTerms(user.role.code, type.isDriving, daysByType.get(type.id)!);
+          const days = terms.days, priceCents = terms.priceCents ?? priceForDays(type, days);
           created.push(
             await tx.licenseApplication.create({
               data: {
@@ -421,6 +425,8 @@ export async function saveType(
         price365Cents,
         enabled: form.get("enabled") === "on",
       };
+      if (id && (await tx.licenseType.findUnique({ where: { id } }))?.isDriving)
+        throw new Error("The driving license has fixed pricing and cannot be edited.");
       const type = id
         ? await tx.licenseType.update({ where: { id, deletedAt: null }, data })
         : await tx.licenseType.create({ data });
@@ -451,6 +457,8 @@ export async function deleteType(
     const id = String(form.get("id")),
       ip = await ipAddress();
     await db.$transaction(async (tx) => {
+      if ((await tx.licenseType.findUnique({ where: { id } }))?.isDriving)
+        throw new Error("The driving license cannot be removed from the catalog.");
       await tx.licenseType.update({
         where: { id },
         data: { deletedAt: new Date(), enabled: false },
@@ -510,24 +518,29 @@ export async function updateLicense(
   _: ActionResult,
   form: FormData,
 ): Promise<ActionResult> {
-  const actor = await requireUser(["ADMIN"]);
+  const actor = await requireUser(reviewers);
   try {
     const id = String(form.get("id")),
       reason = z.string().trim().min(3).max(1000).parse(form.get("reason")),
       ip = await ipAddress();
     await db.$transaction(async (tx) => {
-      const prior = await tx.license.findUniqueOrThrow({ where: { id } });
+      const prior = await tx.license.findUniqueOrThrow({ where: { id, deletedAt: null } });
+      const operation = String(form.get("operation"));
+      if (!["edit", "revoke", "remove"].includes(operation)) throw new Error("Invalid operation.");
+      if (operation !== "revoke" && actor.role.code !== "ADMIN") throw new Error("Administrator access required.");
       if (form.get("operation") === "revoke") {
-        if (prior.status === "REVOKED")
-          throw new Error("This license is already revoked.");
+        if (!canRevoke(actor.role.code, prior.status, prior.expiresAt))
+          throw new Error("You can only revoke expired licenses; administrators may revoke at any time.");
         await tx.license.update({
-          where: { id },
+          where: { id, deletedAt: null, status: prior.status, expiresAt: prior.expiresAt },
           data: {
             status: "REVOKED",
             revokedAt: new Date(),
             revocationReason: reason,
           },
         });
+      } else if (operation === "remove") {
+        await tx.license.update({ where: { id, deletedAt: null, status: prior.status, expiresAt: prior.expiresAt }, data: { deletedAt: new Date() } });
       } else {
         const citizenName = z
             .string()
@@ -542,12 +555,12 @@ export async function updateLicense(
             .max(60)
             .regex(/^[\w-]+$/)
             .parse(form.get("cid")),
-          expiryInput = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).parse(form.get("expiresAt")),
-          expiresAt = z.coerce.date().parse(`${expiryInput}:00Z`);
-        if (expiresAt <= prior.issuedAt)
+          expiryInput = prior.expiresAt === null ? null : z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).parse(form.get("expiresAt")),
+          expiresAt = expiryInput === null ? null : z.coerce.date().parse(`${expiryInput}:00Z`);
+        if (expiresAt && expiresAt <= prior.issuedAt)
           throw new Error("Expiration must be after the issue date.");
         await tx.license.update({
-          where: { id },
+          where: { id, deletedAt: null, status: prior.status, expiresAt: prior.expiresAt },
           data: {
             citizenName,
             cid,
@@ -557,7 +570,7 @@ export async function updateLicense(
                 ? "REVOKED"
                 : prior.supersededAt
                   ? "EXPIRED"
-                  : expiresAt > new Date()
+                  : expiresAt === null || expiresAt > new Date()
                     ? "ACTIVE"
                     : "EXPIRED",
             expiringNotifiedAt: null,
@@ -570,7 +583,7 @@ export async function updateLicense(
         actor,
         form.get("operation") === "revoke"
           ? "LICENSE_REVOKED"
-          : "LICENSE_EDITED",
+          : operation === "remove" ? "LICENSE_REMOVED" : "LICENSE_EDITED",
         id,
         ip,
         {
@@ -578,13 +591,13 @@ export async function updateLicense(
           before: {
             citizenName: prior.citizenName,
             cid: prior.cid,
-            expiresAt: prior.expiresAt.toISOString(),
+            expiresAt: prior.expiresAt?.toISOString() ?? null,
             status: prior.status,
           },
           after:
             form.get("operation") === "revoke"
               ? { status: "REVOKED" }
-              : {
+              : operation === "remove" ? { removed: true } : {
                   citizenName: String(form.get("citizenName")),
                   cid: String(form.get("cid")),
                   expiresAt: String(form.get("expiresAt")),

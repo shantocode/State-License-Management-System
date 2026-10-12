@@ -53,7 +53,7 @@ export function requestedDaysByType(form: FormData, typeIds: string[]) {
   const map = new Map<string, number>();
   for (const id of typeIds) {
     const days = Number(form.get(`days_${id}`));
-    if (!(durations as readonly number[]).includes(days))
+    if (![0, ...durations].includes(days))
       throw new Error("Select a valid license duration for every type chosen.");
     map.set(id, days);
   }

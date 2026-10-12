@@ -7,7 +7,7 @@ import {
   pageNumber,
   type SearchParams,
 } from "@/lib/queries";
-import { date, effectiveStatus } from "@/lib/policy";
+import { date, effectiveStatus, canReview, canRevoke } from "@/lib/policy";
 import { Heading, Panel, Badge, Empty, Pagination } from "@/components/common";
 import {
   Table,
@@ -40,7 +40,7 @@ export default async function Licenses({
       skip: (page - 1) * 20,
       take: 21,
     }),
-    db.licenseType.findMany({ where: { deletedAt: null } }),
+    db.licenseType.findMany({ where: { deletedAt: null, ...(user.role.code === "DRIVING_INSTRUCTOR" ? { isDriving: true } : {}) } }),
   ]);
   return (
     <>
@@ -79,11 +79,11 @@ export default async function Licenses({
                 {[
                   "License / citizen",
                   "Type",
-                  "Lawyer",
+                  "Submitted by",
                   "Issued",
                   "Expires",
                   "Status",
-                  ...(user.role.code === "ADMIN" ? ["Action"] : []),
+                  ...(canReview(user.role.code) ? ["Action"] : []),
                 ].map((t) => (
                   <TableHead key={t}>{t}</TableHead>
                 ))}
@@ -107,11 +107,12 @@ export default async function Licenses({
                   <TableCell>
                     <Badge status={effectiveStatus(l.status, l.expiresAt)} />
                   </TableCell>
-                  {user.role.code === "ADMIN" && (
+                  {canReview(user.role.code) && (
                     <TableCell>
-                      {effectiveStatus(l.status, l.expiresAt) === "EXPIRED" && (
+                      {canRevoke(user.role.code, l.status, l.expiresAt) && (
                         <RevokeInline id={l.id} />
                       )}
+                      {user.role.code === "ADMIN" && <RevokeInline id={l.id} operation="remove" />}
                     </TableCell>
                   )}
                 </TableRow>

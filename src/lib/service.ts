@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { db } from "./db";
 import {
   distribute,
+  drivingSplit,
+  DRIVING_PRICE_CENTS,
   expiration,
   canReview,
   paymentStatuses,
@@ -59,12 +61,15 @@ export async function reviewApplication(
     async (tx) => {
       const app = await tx.licenseApplication.findUniqueOrThrow({
         where: { id },
-        include: { renewalOf: true },
+        include: { renewalOf: true, licenseType: true },
       });
       if (app.status !== "PENDING")
         throw new Error("This application has already been reviewed.");
       if (app.lawyerId === actor.id)
         throw new Error("You cannot review your own application.");
+      const driving = app.licenseType.isDriving;
+      if (decision === "approve" && (days !== app.requestedDays || (driving && (days !== 0 || app.priceCents !== DRIVING_PRICE_CENTS))))
+        throw new Error("Approve the requested duration and price. Submit a new application to change them.");
       const now = new Date();
       const claimed = await tx.licenseApplication.updateMany({
         where: { id, status: "PENDING" },
@@ -94,9 +99,9 @@ export async function reviewApplication(
           throw new Error(
             "Verify payment. Payment amount must exactly match the license price.",
           );
-        if (app.renewalOf?.status === "REVOKED" || app.renewalOf?.supersededAt)
+        if (app.renewalOf?.status === "REVOKED" || app.renewalOf?.supersededAt || app.renewalOf?.deletedAt || (app.renewalOf && app.renewalOf.expiresAt === null))
           throw new Error("A revoked or superseded license cannot be renewed.");
-        const settings = await tx.systemSettings.findUniqueOrThrow({
+        const settings = driving ? drivingSplit : await tx.systemSettings.findUniqueOrThrow({
           where: { id: 1 },
         });
         const split = distribute(
@@ -106,7 +111,7 @@ export async function reviewApplication(
           settings.governmentBps,
         );
         const start =
-          app.renewalOf && app.renewalOf.expiresAt > now
+          app.renewalOf?.expiresAt && app.renewalOf.expiresAt > now
             ? app.renewalOf.expiresAt
             : now;
         await tx.license.create({
@@ -116,7 +121,7 @@ export async function reviewApplication(
             citizenName: app.citizenName,
             cid: app.cid,
             issuedAt: now,
-            expiresAt: expiration(days, start),
+            expiresAt: driving ? null : expiration(days, start),
           },
         });
         if (app.renewalOf)
@@ -218,6 +223,7 @@ export async function expireLicenses() {
       const licenses = await tx.license.findMany({
         where: {
           status: "ACTIVE",
+          deletedAt: null,
           OR: [
             { expiresAt: { lte: now }, expiredNotifiedAt: null },
             { expiresAt: { gt: now, lte: soon }, expiringNotifiedAt: null },
@@ -229,7 +235,7 @@ export async function expireLicenses() {
       let expired = 0,
         notified = 0;
       for (const license of licenses) {
-        const isExpired = license.expiresAt <= now;
+        const isExpired = license.expiresAt !== null && license.expiresAt <= now;
         const changed = await tx.license.updateMany({
           where: {
             id: license.id,

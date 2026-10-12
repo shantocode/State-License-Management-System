@@ -1,13 +1,14 @@
+import { isApplicant } from "./policy";
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
 import type { RoleCode } from "./policy";
 
 export async function applicationSummary(role: RoleCode, userId: string) {
-  const reviewer = role !== "ADMIN" && role !== "LAWYER";
+  const reviewer = role !== "ADMIN" && !isApplicant(role);
   const [counts, pendingQueue] = await Promise.all([
     db.licenseApplication.groupBy({
       by: ["status"],
-      where: role === "LAWYER" ? { lawyerId: userId } : reviewer ? { reviewerId: userId } : {},
+      where: isApplicant(role) ? { lawyerId: userId } : reviewer ? { reviewerId: userId } : {},
       _count: { _all: true },
     }),
     reviewer ? db.licenseApplication.count({ where: { status: "PENDING" } }) : 0,

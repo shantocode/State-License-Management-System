@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { effectiveStatus } from "./policy";
+import { effectiveStatus, isApplicant } from "./policy";
 export type SearchParams = Record<string, string | string[] | undefined>;
 export const param = (p: SearchParams, key: string) =>
   typeof p[key] === "string" ? (p[key] as string).slice(0, 150) : "";
@@ -14,7 +14,7 @@ export function applicationWhere(
   lawyer = "",
 ): Prisma.LicenseApplicationWhereInput {
   return {
-    ...(role === "LAWYER"
+    ...(isApplicant(role)
       ? { lawyerId: userId }
       : lawyer
         ? { lawyerId: lawyer }
@@ -47,12 +47,13 @@ export function licenseWhere(
 ): Prisma.LicenseWhereInput {
   const now = new Date();
   return {
+    deletedAt: null,
     application: {
-      ...(role === "LAWYER" ? { lawyerId: userId } : {}),
+      ...(role === "DRIVING_INSTRUCTOR" ? { licenseType: { isDriving: true } } : {}),
       ...(type ? { licenseTypeId: type } : {}),
     },
     ...(status === "ACTIVE"
-      ? { status: "ACTIVE", expiresAt: { gt: now } }
+      ? { status: "ACTIVE", OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }
       : status === "EXPIRED"
         ? {
             OR: [

@@ -10,6 +10,7 @@ import {
   durationLabel,
   paymentStatusLabel,
   distribute,
+  drivingSplit,
 } from "@/lib/policy";
 import { Heading, Panel, Badge } from "@/components/common";
 import { ReviewForm } from "@/components/review-form";
@@ -24,6 +25,7 @@ export default async function ApplicationDetail({
     where: { id },
     include: {
       lawyer: { select: { name: true } },
+      licenseType: true,
       reviewer: { select: { name: true } },
       license: true,
       renewalOf: true,
@@ -41,9 +43,9 @@ export default async function ApplicationDetail({
   const projectedSplit = !a.revenue
     ? distribute(
         a.priceCents,
-        settings.lawyerBps,
-        settings.reviewerBps,
-        settings.governmentBps,
+        (a.licenseType.isDriving ? drivingSplit : settings).lawyerBps,
+        (a.licenseType.isDriving ? drivingSplit : settings).reviewerBps,
+        (a.licenseType.isDriving ? drivingSplit : settings).governmentBps,
       )
     : null;
   const details = [
@@ -142,7 +144,7 @@ export default async function ApplicationDetail({
                   </div>
                 </>
               )}
-              {a.license && (
+              {a.license && !a.license.deletedAt && (
                 <div>
                   <dt>Issued license</dt>
                   <dd>
@@ -174,7 +176,7 @@ export default async function ApplicationDetail({
             <Panel title="Revenue allocated">
               <dl className="details">
                 {[
-                  ["Lawyer", money(a.revenue.lawyerCents)],
+                  [a.licenseType.isDriving ? "Driving Instructor" : "Lawyer", money(a.revenue.lawyerCents)],
                   ["Reviewer", money(a.revenue.reviewerCents)],
                   ["Government", money(a.revenue.governmentCents)],
                   ["Total", money(a.revenue.totalCents)],
@@ -195,7 +197,7 @@ export default async function ApplicationDetail({
                 </p>
                 <dl className="details">
                   {[
-                    ["Lawyer", money(projectedSplit.lawyerCents)],
+                    [a.licenseType.isDriving ? "Driving Instructor" : "Lawyer", money(projectedSplit.lawyerCents)],
                     ["Reviewer", money(projectedSplit.reviewerCents)],
                     ["Government", money(projectedSplit.governmentCents)],
                     ["Total", money(a.priceCents)],

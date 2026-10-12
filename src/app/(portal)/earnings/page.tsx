@@ -105,7 +105,7 @@ export default async function Earnings({
     ? [
         ["Collected revenue", money(s.totalCents || 0)],
         ["Government share", money(s.governmentCents || 0)],
-        ["Lawyer allocations", money(s.lawyerCents || 0)],
+        ["Applicant allocations", money(s.lawyerCents || 0)],
         ["Reviewer allocations", money(s.reviewerCents || 0)],
       ]
     : [
@@ -156,7 +156,7 @@ export default async function Earnings({
                   "Application",
                   "Type",
                   ...(admin
-                    ? ["Total", "Lawyer", "Reviewer", "Government"]
+                    ? ["Total", "Applicant", "Reviewer", "Government"]
                     : ["Your earnings"]),
                 ].map((t) => (
                   <TableHead key={t}>{t}</TableHead>

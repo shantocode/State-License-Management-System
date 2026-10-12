@@ -14,7 +14,9 @@ export function ApplicationForm({
   types,
   split,
   renewal,
+  driving = false,
 }: {
+  driving?: boolean;
   types: {
     id: string;
     name: string;
@@ -31,13 +33,14 @@ export function ApplicationForm({
     licenseTypeId: string;
   };
 }) {
+  const options = driving ? [0] : durations;
   const [selected, setSelected] = useState<string[]>(
     renewal ? [renewal.licenseTypeId] : types[0] ? [types[0].id] : [],
   );
   const initialDays = renewal
-    ? { [renewal.licenseTypeId]: durations[0] }
+    ? { [renewal.licenseTypeId]: options[0] }
     : types[0]
-      ? { [types[0].id]: durations[0] }
+      ? { [types[0].id]: options[0] }
       : {};
   const [daysByType, setDaysByType] =
     useState<Record<string, number>>(initialDays);
@@ -46,7 +49,7 @@ export function ApplicationForm({
   }
   const chosen = types.filter((t) => selected.includes(t.id));
   const totalCents = chosen.reduce(
-    (sum, t) => sum + priceForDays(t, daysByType[t.id] ?? durations[0]),
+    (sum, t) => sum + priceForDays(t, daysByType[t.id] ?? options[0]),
     0,
   );
   const totalSplit = distribute(
@@ -61,7 +64,7 @@ export function ApplicationForm({
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
     setDaysByType((prev) =>
-      prev[id] !== undefined ? prev : { ...prev, [id]: durations[0] },
+      prev[id] !== undefined ? prev : { ...prev, [id]: options[0] },
     );
   }
   return (
@@ -124,20 +127,20 @@ export function ApplicationForm({
                       />
                       {t.name}
                       {!isSelected &&
-                        ` — from ${money(priceForDays(t, durations[0]))}`}
+                        ` — from ${money(priceForDays(t, options[0]))}`}
                     </label>
                     {isSelected && (
                       <>
                         <select
                           name={`days_${t.id}`}
-                          value={daysByType[t.id] ?? durations[0]}
+                          value={daysByType[t.id] ?? options[0]}
                           onChange={(e) =>
                             setDays(t.id, Number(e.target.value))
                           }
                           aria-label={`Duration for ${t.name}`}
                           required
                         >
-                          {durations.map((d) => (
+                          {options.map((d) => (
                             <option key={d} value={d}>
                               {durationLabel(d)}
                             </option>
@@ -145,7 +148,7 @@ export function ApplicationForm({
                         </select>
                         <span className="license-type-price">
                           {money(
-                            priceForDays(t, daysByType[t.id] ?? durations[0]),
+                            priceForDays(t, daysByType[t.id] ?? options[0]),
                           )}
                         </span>
                       </>
@@ -178,7 +181,7 @@ export function ApplicationForm({
                 {chosen.length > 1 ? "s" : ""}:{" "}
                 <strong>{money(totalCents)}</strong>
               </div>
-              <div>You (lawyer) receive: {money(totalSplit.lawyerCents)}</div>
+              <div>You ({driving ? "driving instructor" : "lawyer"}) receive: {money(totalSplit.lawyerCents)}</div>
               <div>Reviewer receives: {money(totalSplit.reviewerCents)}</div>
               <div>Government receives: {money(totalSplit.governmentCents)}</div>
             </div>

@@ -64,6 +64,11 @@ async function seed() {
       create: { name, price60Cents, price180Cents, price365Cents, description },
       update: {},
     });
+  await db.licenseType.upsert({
+    where: { name: "Driving License" },
+    create: { name: "Driving License", description: "Driving authorization with no expiry.", isDriving: true, price60Cents: 300000, price180Cents: 300000, price365Cents: 300000 },
+    update: { isDriving: true, price60Cents: 300000, price180Cents: 300000, price365Cents: 300000 },
+  });
   console.log(
     "Roles, default license types, settings, and initial administrator are ready. Existing data was preserved.",
   );

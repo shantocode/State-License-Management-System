@@ -1,4 +1,5 @@
 "use client";
+import { durationLabel } from "@/lib/policy";
 import { useState } from "react";
 import { ActionForm, Submit } from "./form";
 import { Field } from "./common";
@@ -31,9 +32,7 @@ export function ReviewForm({
             hint="Defaults to what the applicant requested."
           >
             <select name="days" defaultValue={String(requestedDays)}>
-              <option value="60">2 months · 60 days</option>
-              <option value="180">6 months · 180 days</option>
-              <option value="365">12 months · 365 days</option>
+              <option value={requestedDays}>{durationLabel(requestedDays)}</option>
             </select>
           </Field>
           <Field

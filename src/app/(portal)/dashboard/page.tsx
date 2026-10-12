@@ -1,3 +1,4 @@
+import { isApplicant, drivingSplit } from "@/lib/policy";
 import Link from "next/link";
 import {
   FileText,
@@ -20,7 +21,7 @@ import { money, date, roleLabel } from "@/lib/policy";
 export default async function Dashboard() {
   const user = await requireUser(),
     admin = user.role.code === "ADMIN",
-    lawyer = user.role.code === "LAWYER";
+    lawyer = isApplicant(user.role.code);
   const scope = lawyer ? { lawyerId: user.id } : {},
     now = new Date(),
     sixMonths = new Date(
@@ -42,10 +43,11 @@ export default async function Dashboard() {
   ] = await Promise.all([
     applicationSummary(user.role.code, user.id),
     db.license.count({
-      where: { application: scope, status: "ACTIVE", expiresAt: { gt: now } },
+      where: { deletedAt: null, application: scope, status: "ACTIVE", OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
     }),
     db.license.count({
       where: {
+        deletedAt: null,
         application: scope,
         OR: [
           { status: "EXPIRED" },
@@ -256,9 +258,9 @@ export default async function Dashboard() {
         <Panel title="Revenue distribution">
           <div className="panel-body">
             {[
-              ["Lawyer", settings.lawyerBps],
-              ["Reviewer", settings.reviewerBps],
-              ["Government", settings.governmentBps],
+              [user.role.code === "DRIVING_INSTRUCTOR" ? "Driving Instructor" : "Lawyer", (user.role.code === "DRIVING_INSTRUCTOR" ? drivingSplit : settings).lawyerBps],
+              ["Reviewer", (user.role.code === "DRIVING_INSTRUCTOR" ? drivingSplit : settings).reviewerBps],
+              ["Government", (user.role.code === "DRIVING_INSTRUCTOR" ? drivingSplit : settings).governmentBps],
             ].map(([label, bps]) => (
               <div className="split-row" key={label}>
                 <div>

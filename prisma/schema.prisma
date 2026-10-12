@@ -8,6 +8,7 @@ datasource db {
 enum RoleCode {
   ADMIN
   LAWYER
+  DRIVING_INSTRUCTOR
   STATE_EMPLOYEE
   STATE_ASSISTANT
   REVIEWER
@@ -75,6 +76,7 @@ model LicenseType {
   id String @id @default(cuid())
   name String @unique @db.VarChar(100)
   description String @db.VarChar(500)
+  isDriving Boolean @default(false)
   price60Cents Int @map("price90Cents") @db.UnsignedInt
   price180Cents Int @db.UnsignedInt
   price365Cents Int @db.UnsignedInt
@@ -129,7 +131,8 @@ model License {
   citizenName String @db.VarChar(120)
   cid String @db.VarChar(60)
   issuedAt DateTime @default(now())
-  expiresAt DateTime
+  expiresAt DateTime?
+  deletedAt DateTime?
   status LicenseStatus @default(ACTIVE)
   revokedAt DateTime?
   supersededAt DateTime?

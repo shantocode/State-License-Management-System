@@ -1,3 +1,4 @@
+import { drivingSplit } from "@/lib/policy";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -8,11 +9,11 @@ export default async function NewApplication({
 }: {
   searchParams: Promise<{ renewal?: string }>;
 }) {
-  const user = await requireUser(["LAWYER"]),
+  const user = await requireUser(["LAWYER", "DRIVING_INSTRUCTOR"]),
     { renewal: id } = await searchParams;
   const [types, prior, settings] = await Promise.all([
     db.licenseType.findMany({
-      where: { enabled: true, deletedAt: null },
+      where: { enabled: true, deletedAt: null, isDriving: user.role.code === "DRIVING_INSTRUCTOR" },
       orderBy: { name: "asc" },
     }),
     id
@@ -24,7 +25,7 @@ export default async function NewApplication({
     id &&
     (!prior ||
       prior.application.lawyerId !== user.id ||
-      prior.status === "REVOKED")
+      prior.status === "REVOKED" || prior.deletedAt || prior.expiresAt === null)
   )
     notFound();
   return (
@@ -40,7 +41,8 @@ export default async function NewApplication({
       <Panel title="Application details">
         <ApplicationForm
           types={types}
-          split={{
+          driving={user.role.code === "DRIVING_INSTRUCTOR"}
+          split={user.role.code === "DRIVING_INSTRUCTOR" ? drivingSplit : {
             lawyerBps: settings.lawyerBps,
             reviewerBps: settings.reviewerBps,
             governmentBps: settings.governmentBps,

@@ -78,7 +78,7 @@ test("transactional approval, RBAC, renewal, expiration, and reports", async () 
     );
     await assert.rejects(
       reviewApplication(reviewer, app.id, "approve", 60, "", "NOT_RECEIVED", "test"),
-      /Verify payment/,
+      /Payment has not been received/,
     );
     assert.equal(
       (await db.licenseApplication.findUniqueOrThrow({ where: { id: app.id } }))
@@ -111,8 +111,8 @@ test("transactional approval, RBAC, renewal, expiration, and reports", async () 
     const license = await db.license.findUniqueOrThrow({
         where: { applicationId: app.id },
       }),
-      renewal = await create({ renewalOfId: license.id });
-    assert.equal(license.expiresAt.getTime() - license.issuedAt.getTime(), 60 * 86400000);
+      renewal = await create({ renewalOfId: license.id, requestedDays: 180 });
+    assert.equal(license.expiresAt!.getTime() - license.issuedAt.getTime(), 60 * 86400000);
     await reviewApplication(
       reviewer,
       renewal.id,
@@ -126,11 +126,11 @@ test("transactional approval, RBAC, renewal, expiration, and reports", async () 
         where: { applicationId: renewal.id },
       }),
       old = await db.license.findUniqueOrThrow({ where: { id: license.id } });
-    assert.equal(old.expiresAt.getTime(), license.expiresAt.getTime());
+    assert.equal(old.expiresAt!.getTime(), license.expiresAt!.getTime());
     assert.ok(old.supersededAt);
     assert.equal(
-      next.expiresAt.getTime(),
-      license.expiresAt.getTime() + 180 * 86400000,
+      next.expiresAt!.getTime(),
+      license.expiresAt!.getTime() + 180 * 86400000,
     );
     const reject = await create();
     await reviewApplication(
