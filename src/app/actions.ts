@@ -640,7 +640,7 @@ export async function recordDrivingLicense(
   _: ActionResult,
   form: FormData,
 ): Promise<ActionResult> {
-  const user = await requireUser(["STATE_ASSISTANT", "ADMIN"]);
+  const user = await requireUser(["STATE_ASSISTANT", "STATE_EMPLOYEE", "ADMIN"]);
   let licenseId = "";
   try {
     const data = citizenSchema.parse(object(form)),
@@ -690,17 +690,21 @@ export async function recordDrivingLicense(
             expiresAt: null,
           },
         });
-        // Directly recorded licenses have no instructor: the full fee goes to government.
+        // Manual driving license: 50% to the recording staff member (reviewer), 50% government, 0% lawyer.
+        const half = Math.floor(DRIVING_PRICE_CENTS / 2);
         await tx.revenueDistribution.create({
           data: {
             applicationId: app.id,
             totalCents: DRIVING_PRICE_CENTS,
             lawyerBps: 0,
-            reviewerBps: 0,
-            governmentBps: 10000,
+            reviewerBps: 5000,
+            governmentBps: 5000,
             lawyerCents: 0,
-            reviewerCents: 0,
-            governmentCents: DRIVING_PRICE_CENTS,
+            reviewerCents: half,
+            governmentCents: DRIVING_PRICE_CENTS - half,
+            earnings: {
+              create: [{ userId: user.id, kind: "REVIEWER", amountCents: half }],
+            },
           },
         });
         await audit(tx, user, "DRIVING_LICENSE_RECORDED", license.id, ip, {

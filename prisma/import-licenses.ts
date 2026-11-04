@@ -13,6 +13,9 @@ import ExcelJS from "exceljs";
  *   npm run db:import-licenses -- --dry-run     (preview only, writes nothing)
  *   npm run db:import-licenses                  (real import)
  *   npm run db:import-licenses -- path/to/file.xlsx
+ *
+ * Also imports the "Driver" sheet (CID | Issue Date) as no-expiry driving licenses
+ * (one license per unique CID; safe to re-run).
  */
 const db = new PrismaClient();
 const dryRun = process.argv.includes("--dry-run");
@@ -40,7 +43,7 @@ function toDate(v: ExcelJS.CellValue): Date | null {
 const ymd = (d: Date) => d.toISOString().slice(0, 10).replaceAll("-", "");
 const isYes = (v: ExcelJS.CellValue) => String(v ?? "").trim().toLowerCase() === "yes";
 
-async function main() {
+async function importLicenses() {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(file);
   const ws = wb.getWorksheet("License");
@@ -181,6 +184,101 @@ async function main() {
   console.log("Done.");
 }
 
+async function importDrivers() {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(file);
+  const ws = wb.getWorksheet("Driver");
+  if (!ws) return console.log('No "Driver" sheet found - skipped.');
+
+  const col: Record<string, number> = {};
+  ws.getRow(1).eachCell((c, n) => {
+    const k = String(c.value ?? "").trim().toLowerCase();
+    col[k.startsWith("issue") ? "issue" : k] = n;
+  });
+  if (!col.cid || !col.issue) throw new Error('Columns "CID" and "Issue Date" are required.');
+
+  const dates = new Map<string, Date | null>();
+  let rows = 0;
+  ws.eachRow((row, n) => {
+    if (n === 1) return;
+    const cid = String(row.getCell(col.cid).value ?? "").trim();
+    if (!cid) return;
+    rows++;
+    const d = toDate(row.getCell(col.issue).value);
+    const cur = dates.get(cid);
+    if (cur === undefined || (d && (!cur || d < cur))) dates.set(cid, d);
+  });
+
+  const type = await db.licenseType.findFirst({ where: { isDriving: true, deletedAt: null } });
+  if (!type) throw new Error("Driving license type not found. Run the migrations first.");
+  const username = (process.env.ADMIN_USERNAME || "admin").toLowerCase();
+  const admin = await db.user.findUnique({ where: { username } });
+  if (!admin) throw new Error(`Admin user "${username}" not found.`);
+
+  const existing = new Set(
+    (await db.license.findMany({
+      where: { deletedAt: null, status: "ACTIVE", application: { licenseType: { isDriving: true } } },
+      select: { cid: true },
+    })).map((l) => l.cid),
+  );
+  const refs = new Set(
+    (await db.licenseApplication.findMany({
+      where: { reference: { startsWith: "IMP-D-" } },
+      select: { reference: true },
+    })).map((a) => a.reference),
+  );
+  const todo = [...dates].filter(([cid]) => !existing.has(cid) && !refs.has(`IMP-D-${cid}`));
+  const undated = todo.filter(([, d]) => !d).length;
+  console.log(`[Driver] Sheet rows: ${rows} | unique CIDs: ${dates.size} | already in registry: ${dates.size - todo.length}`);
+  console.log(`[Driver] To import: ${todo.length} (${undated} without an issue date -> today)`);
+  if (dryRun) return console.log("Dry run - nothing was written.");
+
+  const now = new Date();
+  for (let i = 0; i < todo.length; i += 50) {
+    const batch = todo.slice(i, i + 50);
+    await db.$transaction(
+      async (tx) => {
+        for (const [cid, d] of batch) {
+          const issuedAt = d ?? now;
+          await tx.licenseApplication.create({
+            data: {
+              reference: `IMP-D-${cid}`,
+              citizenName: "N/A",
+              cid,
+              phone: "N/A",
+              licenseTypeId: type.id,
+              typeName: type.name,
+              priceCents: 0,
+              paymentCents: 0,
+              citizenIdUrl: "",
+              requestedDays: 0,
+              durationDays: 0,
+              notes: "Imported from License.xlsx (Driver sheet)",
+              lawyerId: admin.id,
+              reviewerId: admin.id,
+              reviewedAt: issuedAt,
+              status: "APPROVED",
+              paymentStatus: "RECEIVED",
+              createdAt: issuedAt,
+              license: {
+                create: { number: `LIC-IMP-D-${cid}`, citizenName: "N/A", cid, issuedAt, expiresAt: null },
+              },
+            },
+          });
+        }
+      },
+      { timeout: 60000 },
+    );
+    console.log(`Imported ${Math.min(i + 50, todo.length)}/${todo.length}`);
+  }
+  console.log("Done.");
+}
+async function main() {
+  // Only the Driver sheet is imported. Hunting/Mining/Weapon are NOT touched.
+  // To also run that old import, start with: npm run db:import-licenses -- --all
+  if (process.argv.includes("--all")) await importLicenses();
+  await importDrivers();
+}
 main()
   .catch((e) => {
     console.error(e);

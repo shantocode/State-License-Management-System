@@ -122,7 +122,7 @@ export const DRIVING_PRICE_CENTS = 300000;
 export const drivingSplit = { lawyerBps: 7000, reviewerBps: 0, governmentBps: 3000 };
 export const dutyRoles: RoleCode[] = ["STATE_EMPLOYEE", "STATE_ASSISTANT"];
 export const canToggleDuty = (role: string) => (dutyRoles as string[]).includes(role);
-export const canRecordDriving = (role: string) => role === "STATE_ASSISTANT" || role === "ADMIN";
+export const canRecordDriving = (role: string) => ["STATE_ASSISTANT", "STATE_EMPLOYEE", "ADMIN"].includes(role);
 export const isApplicant = (role: string) => ["LAWYER", "DRIVING_INSTRUCTOR"].includes(role);
 export function canRevoke(role: RoleCode, status: string, expiresAt: Date | null, now = new Date()) {
   return status !== "REVOKED" && (role === "ADMIN" ||

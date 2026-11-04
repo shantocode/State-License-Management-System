@@ -41,7 +41,7 @@ export function Navigation({
       Wallet,
     ],
   ];
-  if (role === "STATE_ASSISTANT")
+  if (role === "STATE_ASSISTANT" || role === "STATE_EMPLOYEE")
     items.splice(3, 0, ["/licenses/new-driving", "Record driving license", FileText]);
   if (role === "ADMIN")
     items.push(

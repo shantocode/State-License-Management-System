@@ -4,7 +4,7 @@ import { ActionForm, Submit } from "@/components/form";
 import { recordDrivingLicense } from "@/app/actions";
 import { money, DRIVING_PRICE_CENTS } from "@/lib/policy";
 export default async function NewDrivingLicense() {
-  await requireUser(["STATE_ASSISTANT", "ADMIN"]);
+  await requireUser(["STATE_ASSISTANT", "STATE_EMPLOYEE", "ADMIN"]);
   return (
     <>
       <Heading
@@ -28,7 +28,7 @@ export default async function NewDrivingLicense() {
             </Field>
           </div>
           <div className="alert info full">
-            Fee {money(DRIVING_PRICE_CENTS)} — payment status will be set to <strong>Received</strong>.
+            Fee {money(DRIVING_PRICE_CENTS)} — payment status will be set to <strong>Received</strong>. Split: you (reviewer) 50%, government 50%, lawyer 0%.
             The license is issued immediately with no expiry date.
           </div>
           <div className="form-footer">
