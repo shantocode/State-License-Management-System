@@ -1,0 +1,7 @@
+DATABASE_URL="mysql://velvety_eclipse:2ee440aabcd64c393883786a78a0ab85@ovh-sgp.opfw.me:43415/velvety_eclipse"
+ADMIN_USERNAME="admin"
+ADMIN_NAME="Santo Jons"
+ADMIN_PASSWORD="123456789101112"
+CRON_SECRET="dcacd5dbde37466f99512bbd1968eb7d"
+# Only enable behind a trusted proxy that overwrites x-forwarded-for (Vercel does).
+TRUST_PROXY="true"
